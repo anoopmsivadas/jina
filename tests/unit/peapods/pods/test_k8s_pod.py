@@ -192,6 +192,7 @@ def get_k8s_pod(
         )
     if uses_after:
         parameter_list.extend(['--uses-after', uses_after])
+    parameter_list.append('--noblock-on-start')
     parser = set_gateway_parser() if pod_name == 'gateway' else set_pod_parser()
     args = parser.parse_args(parameter_list)
     pod = K8sPod(args, needs)
@@ -202,11 +203,7 @@ def test_start_creates_namespace():
     ns = 'test'
     pod = get_k8s_pod('gateway', ns, port_expose=8085)
     kubernetes_deployment.deploy_service = Mock()
-    kubernetes_tools.create = Mock()
     pod.start()
-    kubernetes_tools.create.assert_called_once()
-    assert kubernetes_tools.create.call_args[0][0] == 'namespace'
-    assert kubernetes_tools.create.call_args[0][1] == {'name': ns}
     assert kubernetes_deployment.deploy_service.call_args[0][0] == 'gateway'
     assert kubernetes_deployment.deploy_service.call_args[1]['port_expose'] == 8085
 
@@ -217,7 +214,6 @@ def test_start_deploys_gateway():
 
     kubernetes_deployment.deploy_service = Mock()
     kubernetes_deployment.get_cli_params = Mock()
-    kubernetes_tools.create = Mock()
 
     pod = get_k8s_pod(pod_name, ns)
     pod.start()
@@ -271,7 +267,6 @@ def test_start_deploys_runtime_with_parallel(parallel: int):
 
     deploy_mock = Mock()
     kubernetes_deployment.deploy_service = deploy_mock
-    kubernetes_tools.create = Mock()
 
     pod.start()
 
@@ -311,7 +306,6 @@ def test_needs(needs, replicas, expected_calls, expected_executors):
 
     deploy_mock = Mock()
     kubernetes_deployment.deploy_service = deploy_mock
-    kubernetes_tools.create = Mock()
     pod.start()
     assert expected_calls == kubernetes_deployment.deploy_service.call_count
 
@@ -342,7 +336,6 @@ def test_uses_before_and_uses_after(
     )
     deploy_mock = Mock()
     kubernetes_deployment.deploy_service = deploy_mock
-    kubernetes_tools.create = Mock()
     pod.start()
     assert expected_calls == kubernetes_deployment.deploy_service.call_count
 
